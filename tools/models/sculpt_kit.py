@@ -154,6 +154,9 @@ class Sculpt:
         self.density = []     # [(fn(vertex weights dict, position) -> bool, texel scale)] first match wins
         self.decal_lift = {}  # key -> metres a decal sits off the sculpt (higher = drawn over lower)
         self.stitch = []      # [(key_on, key_next_to)] dashed light stitches on key_on along key_next_to
+        self.detail = None    # fn(Blender position) -> 0..1: where decimation keeps more triangles (the face)
+        self.detail_boost = 3.5   # how much denser the detailed part stays
+        self.smooth_region = None  # fn(Blender position) -> 0..1: smoothed on the sculpt before retopology
 
     # 1. forms + shells -> one continuous sculpt
     def _fuse(self, form_obs, shell_obs):
@@ -203,6 +206,20 @@ class Sculpt:
         high = _link(bpy.data.objects.new(self.name + "_sculpt", hme))
         for p in hme.polygons:
             p.use_smooth = True
+        if self.smooth_region:
+            vg = high.vertex_groups.new(name="smooth")
+            for v in hme.vertices:
+                w = self.smooth_region(v.co)
+                if w > 0:
+                    vg.add([v.index], w, "REPLACE")
+            sm = high.modifiers.new("Smooth", "LAPLACIANSMOOTH")
+            sm.vertex_group = "smooth"
+            sm.iterations = 6
+            sm.lambda_factor = 1.0
+            sm.use_volume_preserve = True
+            _activate(high)
+            bpy.ops.object.modifier_apply(modifier="Smooth")
+            high.vertex_groups.remove(high.vertex_groups["smooth"])
         for o in shell_obs:
             o.modifiers.remove(o.modifiers["Solid"])
         print("  sculpt: %d faces" % len(hme.polygons))
@@ -217,11 +234,27 @@ class Sculpt:
         _activate(low)
         # Quadriflow would give cleaner quads, but Blender 5.3's refuses every voxel-remeshed mesh ("needs to be
         # manifold", even a remeshed sphere), so: collapse decimation, which keeps the forms well at this count
-        dm = low.modifiers.new("Dec", "DECIMATE")
-        dm.decimate_type = "COLLAPSE"
-        dm.use_collapse_triangulate = True
-        dm.ratio = self.target_tris / max(1, sum(len(p.vertices) - 2 for p in me.polygons))
-        bpy.ops.object.modifier_apply(modifier="Dec")
+        # with `detail`: decimate everything to detail_boost x the target first, then again with the detailed
+        # part held, so it keeps that density (Blender's weighted collapse is all-or-nothing, so two passes)
+        tris = lambda: sum(len(p.vertices) - 2 for p in low.data.polygons)  # noqa: E731
+        passes = [(self.target_tris * self.detail_boost, False), (self.target_tris, True)] if self.detail else [(self.target_tris, False)]
+        for goal, hold in passes:
+            dm = low.modifiers.new("Dec", "DECIMATE")
+            dm.decimate_type = "COLLAPSE"
+            dm.use_collapse_triangulate = True
+            if hold:
+                vg = low.vertex_groups.new(name="detail")
+                for v in low.data.vertices:
+                    if self.detail(v.co) > 0:
+                        vg.add([v.index], 1.0, "REPLACE")
+                dm.vertex_group = "detail"
+                dm.invert_vertex_group = True
+            dm.ratio = goal / max(1, tris())
+            bpy.ops.object.modifier_apply(modifier="Dec")
+        if self.detail:
+            low.vertex_groups.remove(low.vertex_groups["detail"])
+            n = sum(1 for p in low.data.polygons if self.detail(p.center) > 0)
+            print("  face triangles: %d" % n)
         sm = low.modifiers.new("Relax", "SMOOTH")
         sm.factor = 0.35
         sm.iterations = 2

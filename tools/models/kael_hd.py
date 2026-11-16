@@ -30,12 +30,13 @@ from mathutils import Vector  # noqa: E402
 import numpy as np  # noqa: E402
 
 for k in ("kael_skin", "kael_hair", "kael_leather", "kael_linen", "kael_trousers", "kael_lip", "kael_brow",
-          "kael_eye", "kael_iris"):
+          "kael_eye", "kael_iris", "kael_mouth"):
     K.TILE.setdefault(k, 0.2)
 
 PALETTES = {
     "kael_skin": [(122, 74, 56), (158, 102, 78), (192, 134, 104), (216, 160, 126), (234, 184, 150), (246, 206, 174)],
-    "kael_lip": [(128, 70, 58), (156, 90, 74), (180, 112, 92)],
+    "kael_lip": [(168, 104, 84), (188, 122, 100), (206, 140, 116)],
+    "kael_mouth": [(70, 32, 26), (96, 48, 38), (120, 64, 52)],
     "kael_hair": [(52, 18, 10), (80, 30, 14), (110, 44, 20), (142, 62, 26), (174, 86, 38), (204, 116, 56), (226, 146, 80)],
     "kael_brow": [(60, 22, 12), (88, 34, 16), (116, 48, 22)],
     "kael_eye": [(170, 164, 150), (206, 200, 186), (228, 224, 212)],
@@ -50,7 +51,7 @@ PALETTES = {
 }
 # what covers what (a higher layer gets a contact line where it meets a lower one)
 LAYERS = {"kael_skin": 1, "kael_linen": 2, "kael_trousers": 2, "kael_hair": 4, "boot": 3, "kael_leather": 5,
-          "leather": 7, "brass": 9, "dark": 8, "kael_lip": 1, "kael_brow": 1, "kael_eye": 1, "kael_iris": 1}
+          "leather": 7, "brass": 9, "dark": 8, "kael_lip": 1, "kael_mouth": 1, "kael_brow": 1, "kael_eye": 1, "kael_iris": 1}
 
 
 def hair_streaks(pos, nrm, rng):
@@ -76,7 +77,7 @@ def leather_wear(pos, nrm, rng):
 
 
 STYLE = {
-    "kael_skin": dict(base=0.62, ao=1.0, cav=0.3, up=0.12, noise=0.04, cell=0.02, dither=0.4),
+    "kael_skin": dict(base=0.64, ao=0.6, cav=0.12, up=0.1, noise=0.025, cell=0.03, dither=0.3),
     "kael_hair": dict(base=0.4, ao=1.5, cav=0.6, up=0.25, noise=0.0, pattern=hair_streaks, dither=0.5),
     "kael_leather": dict(base=0.42, ao=1.2, cav=0.6, up=0.15, noise=0.0, pattern=leather_wear, dither=0.35),
     "leather": dict(base=0.5, ao=1.0, cav=0.4, noise=0.08),
@@ -86,7 +87,8 @@ STYLE = {
     "brass": dict(base=0.55, ao=0.8, cav=0.8, up=0.3, noise=0.05),
     "kael_eye": dict(base=0.75, ao=0.4, cav=0.0, up=0.0, noise=0.0, dither=0.2),
     "kael_iris": dict(base=0.5, ao=0.3, cav=0.0, up=0.0, noise=0.0, dither=0.2),
-    "kael_lip": dict(base=0.6, ao=0.8, cav=0.2, noise=0.0, dither=0.3),
+    "kael_lip": dict(base=0.55, ao=0.8, cav=0.2, noise=0.0, dither=0.3),
+    "kael_mouth": dict(base=0.4, ao=0.5, cav=0.0, up=0.0, noise=0.0, dither=0.2),
     "kael_brow": dict(base=0.4, ao=0.5, cav=0.0, noise=0.05),
 }
 
@@ -142,25 +144,9 @@ def build(sc):
             return _D(name, bone, mat, lambda m: (fn(m), _scale(m, HEAD_SCALE)), w)
         return _D(name, bone, mat, fn, w)
     F("cranium", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.1, 0.006), (0.071, 0.096, 0.087), "kael_skin", seg=22, rings=14))
-    F("jaw", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.05, -0.032), (0.056, 0.048, 0.06), "kael_skin", seg=18, rings=10))
-    F("chin", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.022, -0.074), (0.024, 0.02, 0.018), "kael_skin", seg=12, rings=8))
-    F("brow", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.122, -0.071), (0.058, 0.014, 0.02), "kael_skin", seg=16, rings=8))
-    for s in (1, -1):
-        F("cheek_%d" % s, H, "kael_skin", lambda m, s=s: ellipsoid(m, (s * 0.04, 0.085, -0.064), (0.024, 0.017, 0.02), "kael_skin", seg=12, rings=8))
-        F("ear_%d" % s, H, "kael_skin", lambda m, s=s: ellipsoid(m, (s * 0.07, 0.092, 0.01), (0.011, 0.025, 0.016), "kael_skin", seg=10, rings=7, xf=rot("Y", s * -12)))
-    F("nose_bridge", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.1, -0.084), (0.01, 0.024, 0.012), "kael_skin", seg=10, rings=7, xf=rot("X", -8)))
-    F("nose_tip", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.079, -0.096), (0.013, 0.011, 0.012), "kael_skin", seg=10, rings=7))
-    for s in (1, -1):
-        F("nostril_%d" % s, H, "kael_skin", lambda m, s=s: ellipsoid(m, (s * 0.011, 0.075, -0.09), (0.008, 0.007, 0.008), "kael_skin", seg=8, rings=6))
-    F("lips", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.052, -0.084), (0.022, 0.009, 0.01), "kael_skin", seg=12, rings=7))
-    # face decals: eyes (white, then iris on top), brows, the lips' colour
-    for s in (1, -1):
-        D("eye_%d" % s, H, "kael_eye", lambda m, s=s: ellipsoid(m, (s * 0.026, 0.104, -0.078), (0.0105, 0.0048, 0.006), "kael_eye", seg=10, rings=5))
-        D("iris_%d" % s, H, "kael_iris", lambda m, s=s: ellipsoid(m, (s * 0.025, 0.1035, -0.08), (0.0058, 0.0055, 0.004), "kael_iris", seg=8, rings=5))
-        D("browhair_%d" % s, H, "kael_brow", lambda m, s=s: box(m, (s * 0.029, 0.1205, -0.083), (0.032, 0.0048, 0.008), "kael_brow"))
-    D("lip_col", H, "kael_lip", lambda m: ellipsoid(m, (0, 0.051, -0.086), (0.019, 0.006, 0.006), "kael_lip", seg=10, rings=5))
+    face(F, D, H, FACE)
     # hair: a base over the crown (it shows only above the hairline) and swept-back clumps over it
-    F("hair_base", H, "kael_hair", lambda m: ellipsoid(m, (0, 0.112, 0.016), (0.07, 0.094, 0.085), "kael_hair", seg=22, rings=14))
+    F("hair_base", H, "kael_hair", lambda m: ellipsoid(m, (0, 0.11, 0.04), (0.069, 0.092, 0.075), "kael_hair", seg=22, rings=14))
     hair_clumps(F)
 
     # --- arms (arm frame at the shoulder joint; the elbow is at (0.03, -0.309, 0.018))
@@ -235,6 +221,69 @@ def build(sc):
 
 
 HEAD_SCALE = 1.07
+FACE = os.environ.get("KAEL_FACE", "A")   # Cody picked A (2026-11-15); B and C kept for reference
+
+# three takes on his face (Cody 2026-11-15: fix the scowl, the nose and the mouth). Numbers in the head frame (metres).
+FACES = {
+    # A, soft: a gentle brow, thin arched brows, a fine straight nose, thin lips
+    "A": dict(ridge=(0.052, 0.011, 0.014, -0.068), brow=[(0.011, 0.1185), (0.03, 0.1225), (0.046, 0.1195)], brow_w=0.0082,
+              bridge=(0.008, 0.026, 0.01), tip=(0.0, 0.08, -0.097, 0.011, 0.01, 0.011), alae=(0.0105, 0.077, -0.089, 0.0075),
+              upper=(0.02, 0.0055, 0.008, 0.056), lower=(0.018, 0.0065, 0.0085, 0.046), mouth_w=0.034,
+              jaw=(0.056, 0.024, 2.2), chin=(0.022, 0.019, 0.017), cheek=(0.03, 0.022, 0.016)),
+    # B, strong: level, heavier brows, a longer straight nose, a fuller lower lip, a squarer jaw and chin
+    "B": dict(ridge=(0.056, 0.012, 0.016, -0.069), brow=[(0.011, 0.1195), (0.03, 0.121), (0.047, 0.1195)], brow_w=0.0085,
+              bridge=(0.0105, 0.03, 0.011), tip=(0.0, 0.077, -0.099, 0.0135, 0.012, 0.012), alae=(0.012, 0.074, -0.09, 0.0085),
+              upper=(0.021, 0.0055, 0.008, 0.054), lower=(0.02, 0.0075, 0.0095, 0.044), mouth_w=0.038,
+              jaw=(0.06, 0.031, 2.6), chin=(0.028, 0.022, 0.019), cheek=(0.031, 0.021, 0.016)),
+    # C, young: brows higher and arched, a short slightly upturned nose, small full lips, rounder cheeks
+    "C": dict(ridge=(0.05, 0.01, 0.012, -0.067), brow=[(0.012, 0.12), (0.03, 0.1245), (0.045, 0.121)], brow_w=0.007,
+              bridge=(0.0075, 0.02, 0.009), tip=(0.0, 0.084, -0.095, 0.0115, 0.0105, 0.011), alae=(0.0105, 0.081, -0.088, 0.0075),
+              upper=(0.018, 0.006, 0.0085, 0.058), lower=(0.017, 0.0075, 0.009, 0.0485), mouth_w=0.03,
+              jaw=(0.053, 0.021, 2.0), chin=(0.02, 0.017, 0.016), cheek=(0.032, 0.024, 0.018)),
+}
+
+
+def face(F, D, H, which):
+    f = FACES[which]
+    # the lower face: a jaw that tapers from the cheekbones to the chin along a clean jawline, flat in front
+    # (Cody: one round jaw blob bulged round the mouth, as if he were pushing his cheeks up)
+    jw, cw, e = f["jaw"]
+    secs = [(0.006, cw * 0.8, 0.016, 0, -0.066), (0.022, cw, 0.026, 0, -0.058), (0.04, cw + (jw - cw) * 0.45, 0.044, 0, -0.04),
+            (0.065, cw + (jw - cw) * 0.8, 0.058, 0, -0.024), (0.092, jw, 0.068, 0, -0.012), (0.118, jw + 0.008, 0.078, 0, -0.004)]
+    F("jaw", H, "kael_skin", lambda m: loft(m, secs, "kael_skin", e=e, seg=20, cap0=True, cap1=True))
+    F("chin", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.02, -0.07), f["chin"], "kael_skin", seg=12, rings=8))
+    rx, ry, rz, cz = f["ridge"]
+    F("brow", H, "kael_skin", lambda m: ellipsoid(m, (0, 0.121, cz), (rx, ry, rz), "kael_skin", seg=16, rings=8))
+    for s in (1, -1):
+        F("ear_%d" % s, H, "kael_skin", lambda m, s=s: ellipsoid(m, (s * 0.07, 0.092, 0.01), (0.011, 0.025, 0.016), "kael_skin", seg=10, rings=7, xf=rot("Y", s * -12)))
+    # the nose: a narrow bridge running down from between the eyes into the tip, wings either side
+    bw, bl, bd = f["bridge"]
+    tx, ty, tz, trx, try_, trz = f["tip"]
+    top = Vector((0, 0.112, -0.082))
+    tipc = Vector((0, ty, tz))
+    mid = (top + tipc) / 2
+    ang = math.degrees(math.atan2(tipc.z - top.z, top.y - tipc.y))
+    F("nose_bridge", H, "kael_skin", lambda m: ellipsoid(m, tuple(mid), (bw, (top - tipc).length / 2 + 0.004, bd), "kael_skin", seg=10, rings=8,
+                                                          xf=at(*mid) @ rot("X", -ang) @ at(*(-mid))))
+    F("nose_tip", H, "kael_skin", lambda m: ellipsoid(m, (tx, ty, tz), (trx, try_, trz), "kael_skin", seg=10, rings=7))
+    ax, ay, az, ar = f["alae"]
+    for s in (1, -1):
+        F("nostril_%d" % s, H, "kael_skin", lambda m, s=s: ellipsoid(m, (s * ax, ay, az), (ar, ar * 0.8, ar), "kael_skin", seg=8, rings=6))
+    # lips: upper and lower, the lower a touch fuller; the mouth's line painted between them
+    ux, uy, uz, uyc = f["upper"]
+    lx, ly, lz, lyc = f["lower"]
+    F("lip_upper", H, "kael_skin", lambda m: ellipsoid(m, (0, uyc, -0.0785), (ux, uy, uz), "kael_skin", seg=12, rings=7))
+    F("lip_lower", H, "kael_skin", lambda m: ellipsoid(m, (0, lyc, -0.0765), (lx, ly, lz), "kael_skin", seg=12, rings=7))
+    mw = f["mouth_w"]
+    ym = (uyc + lyc) / 2 + 0.001
+    D("mouth", H, "kael_mouth", lambda m: strip(m, [(-mw / 2, ym - 0.0012, -0.09), (-mw / 4, ym, -0.093), (mw / 4, ym, -0.093), (mw / 2, ym - 0.0012, -0.09)], 0.0011))
+    D("lip_col", H, "kael_lip", lambda m: ellipsoid(m, (0, lyc - 0.001, -0.085), (lx * 0.75, ly * 0.55, 0.005), "kael_lip", seg=10, rings=5))
+    # eyes (white, then the iris on top) and brows as arched strips
+    for s in (1, -1):
+        D("eye_%d" % s, H, "kael_eye", lambda m, s=s: ellipsoid(m, (s * 0.026, 0.104, -0.078), (0.0105, 0.0048, 0.006), "kael_eye", seg=10, rings=5))
+        D("iris_%d" % s, H, "kael_iris", lambda m, s=s: ellipsoid(m, (s * 0.025, 0.1035, -0.08), (0.0058, 0.0055, 0.004), "kael_iris", seg=8, rings=5))
+        pts = [(s * x, y, -0.088) for x, y in f["brow"]]
+        D("browhair_%d" % s, H, "kael_brow", lambda m, pts=pts: strip(m, pts, f["brow_w"] / 2))
 
 
 def _scale(m, k):
@@ -271,29 +320,32 @@ def hair_clumps(P):
     for i in range(n):
         beta = math.radians(-76 + 152 * i / (n - 1) + rnd.uniform(-3, 3))
         side = abs(beta) / math.radians(76)
-        psi0 = math.radians(44 - 30 * side ** 1.4 + rnd.uniform(-4, 4))
+        temple = math.exp(-((side - 0.42) / 0.16) ** 2)         # the temples recede, the middle comes to a soft peak
+        psi0 = math.radians(47 - 7 * side - 16 * temple - 18 * max(0.0, side - 0.6) + rnd.uniform(-3, 3))
         psi1 = math.radians(-126 + 26 * side + rnd.uniform(-6, 6))
-        steps = 10
+        steps = 12
         w0 = 0.016 * rnd.uniform(0.8, 1.25)
-        quiff = (1 - side) * rnd.uniform(0.8, 1.2)
+        quiff = max(0.0, 1 - side * 1.6) * rnd.uniform(0.8, 1.2)
+        crop = 0.35 + 0.65 * max(0.0, 1 - side * 1.3)        # close-cropped at the sides
         pts, nrms, wid, thk = [], [], [], []
         for k in range(steps):
             t = k / (steps - 1)
             psi = psi0 + (psi1 - psi0) * t
-            lift = 0.003 + 0.017 * quiff * (1 - t) ** 2.2 + 0.004 * math.sin(t * math.pi)
+            rise = math.sin(math.pi * min(t / 0.5, 1.0)) if t < 0.5 else 0.0
+            lift = 0.0015 + 0.016 * quiff * rise + 0.003 * math.sin(t * math.pi) * crop
             p, nr = surf(psi, beta + math.radians(rnd.uniform(-1.5, 1.5)), lift)
             pts.append(p)
             nrms.append(nr)
-            taper = min(1.0, t * 5 + 0.4) * (1 - t * 0.7)
-            wid.append(w0 * taper)
-            thk.append((0.005 + 0.007 * (1 - side)) * taper + 0.002)
+            taper = min(1.0, t * 7) * (1 - t * 0.7)              # thins to nothing at the hairline
+            wid.append(w0 * max(taper, 0.15))
+            thk.append(((0.004 + 0.008 * crop) * taper + 0.0008))
         P("clump_%d" % i, "head", "kael_hair", lambda m, a=pts, b=nrms, w=wid, h=thk: SK.strand(m, a, b, w, h))
-    # the quiff's tips flick up and back over the brow, uneven
-    for i, (bx, up) in enumerate(((-0.04, 0.02), (-0.018, 0.03), (0.004, 0.026), (0.026, 0.032), (0.044, 0.018))):
-        base, nr = surf(math.radians(42), math.radians(bx * 900), 0.008)
-        tip = base + Vector((bx * 0.25, up, 0.022))
-        mid = (base + tip) / 2 + nr * 0.01
-        P("fringe_%d" % i, "head", "kael_hair", lambda m, a=[base, mid, tip], b=[nr, nr, nr]: SK.strand(m, a, b, [0.013, 0.012, 0.002], [0.008, 0.007, 0.0015]))
+    # a few loose locks lifting up and back off the quiff
+    for i, (bx, up) in enumerate(((-0.022, 0.02), (0.0, 0.026), (0.02, 0.022))):
+        base, nr = surf(math.radians(30), math.radians(bx * 900), 0.014)
+        tip = base + Vector((bx * 0.3, up * 0.6, up))
+        mid = (base + tip) / 2 + nr * 0.006
+        P("lock_%d" % i, "head", "kael_hair", lambda m, a=[base, mid, tip], b=[nr, nr, nr]: SK.strand(m, a, b, [0.012, 0.01, 0.002], [0.007, 0.006, 0.0015]))
     # the nape: a few short clumps hanging lower at the back
     for i, bx in enumerate((-0.03, 0.0, 0.03)):
         base, nr = surf(math.radians(-128), math.radians(bx * 900), 0.004)
@@ -321,11 +373,16 @@ def main():
     sc.palettes = PALETTES
     sc.layer = LAYERS
     sc.style = STYLE
-    sc.decal_lift = {"kael_eye": 0.0015, "kael_iris": 0.0025, "kael_brow": 0.002, "kael_lip": 0.0015, "dark": 0.003, "leather": 0.0025}
+    sc.decal_lift = {"kael_eye": 0.0015, "kael_iris": 0.0025, "kael_brow": 0.0028, "kael_lip": 0.0012, "kael_mouth": 0.0022, "dark": 0.003, "leather": 0.0025}
     sc.stitch = [("kael_leather", "kael_linen"), ("kael_leather", "kael_trousers")]
     # texel density: the head and face twice the body's, the hands a little more
     sc.density = [(lambda w, c: w.get("head", 0) + w.get("neck", 0) * 0.5 > 1.5, 2.6),
                   (lambda w, c: w.get("hand_r", 0) + w.get("hand_l", 0) > 1.5, 1.3)]
+    # the face keeps more triangles than the body when the sculpt is decimated
+    # the sides of the face smoothed on the sculpt (Cody 2026-11-15: the cheeks were far too prominent), the
+    # nose, lips and brow left sharp
+    sc.smooth_region = lambda p: (1.0 if (1.53 < p.z < 1.66 and p.y > 0.02 and abs(p.x) > 0.018) else 0.0)
+    sc.detail = lambda p: 1.0 if (p.z > 1.53 and p.z < 1.69 and p.y > 0.03) else 0.0   # Blender axes: +Y is his front
     build(sc)
     sc.finish()
     K.clear()

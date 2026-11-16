@@ -25,6 +25,7 @@ func _ready() -> void:
 	var g := subject.global_position
 	var shots := [
 		[who + "_face", g + Vector3(0.15, 1.55, -1.05), g + Vector3(0, 1.5, 0)],
+		[who + "_face_side", g + Vector3(0.75, 1.58, -0.8), g + Vector3(0, 1.55, 0)],
 		[who + "_front", g + Vector3(0.3, 1.2, -3.2), g + Vector3(0, 0.95, 0)],
 		[who + "_three_quarter", g + Vector3(-2.0, 1.4, -2.4), g + Vector3(0, 1.0, 0)],
 		[who + "_side", g + Vector3(3.0, 1.2, -0.2), g + Vector3(0, 1.0, 0)],
