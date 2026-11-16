@@ -27,9 +27,11 @@ const DRESS := {
 		"armor": ["iron_helm", "chain_shirt", "iron_greaves", "cloth_trousers"], "weapon": "broadsword"},
 }
 
+## Monsters: "hd" = the rebuilt model (tools/models/*_hd.py), with its own animations unless "anims"
+## names a model to borrow them from (the Skeleton keeps Miasma's skeleton.glb animations: same pivots).
 const MONSTERS := {
-	"skeleton": {"model": "res://assets/models/skeleton/skeleton.glb", "texture": "res://assets/models/skeleton/skeleton.png", "scale": 1.0},
-	"hollow_wolf": {"model": "res://assets/models/hollow_wolf/hollow_wolf.glb", "texture": "res://assets/models/hollow_wolf/hollow_wolf.png", "scale": 1.0},
+	"skeleton": {"hd": "res://assets/models/hd/skeleton_hd.glb", "anims": "res://assets/models/skeleton/skeleton.glb", "scale": 1.0},
+	"hollow_wolf": {"hd": "res://assets/models/hd/hollow_wolf_hd.glb", "scale": 1.0},
 }
 const LOOPS := ["idle", "walk", "run", "stance", "guard_hold", "down", "victory_hold"]
 
@@ -37,7 +39,8 @@ var kind := ""          # "kael", "guard", "skeleton", "hollow_wolf"
 var is_hero := false
 var model: Node3D
 var anim: AnimationPlayer
-var bones := {}         # bone name -> Node3D
+var bones := {}         # bone name -> Node3D (rigid models; skinned ones use `skeleton`)
+var skeleton: Skeleton3D  # the rig of a skinned model (rebuilt heroes, the Hollow Wolf)
 var _materials: Array[ShaderMaterial] = []
 var _meshes: Array[MeshInstance3D] = []
 var _current := ""
@@ -96,34 +99,86 @@ func _build_hero() -> void:
 	_add_battle_anims()
 
 
-## A rebuilt hero. Same bones as player.glb, so it borrows that model's AnimationPlayer
-## (walk, run, idle...) and gets the same battle animations made in code below.
+## A rebuilt hero, skinned on the people's rig (tools/models/rig_kit.py): a Skeleton3D with the same bone
+## names and pivots as player.glb, every bone's rest rotation the identity. player.glb's own animations
+## (walk, run, idle...) are converted to Skeleton3D tracks, and the battle animations made below are built
+## straight onto the bones.
 func _build_hero_hd() -> void:
 	model = (load(HD_DIR + kind + "_hd.glb") as PackedScene).instantiate()
 	add_child(model)
 	_collect(model)
 	var mats := {}
 	for mi in _meshes:
-		mi.material_override = _hd_material(String(mi.name), mats)
-	var src := (load(PLAYER_MODEL) as PackedScene).instantiate()
-	var found := src.find_children("*", "AnimationPlayer", true, false)
-	if not found.is_empty():
-		var copy := (found[0] as AnimationPlayer).duplicate() as AnimationPlayer
-		model.add_child(copy)
-	src.free()
+		_dress_hd(mi, mats)
+	var found := model.find_children("*", "Skeleton3D", true, false)
+	skeleton = found[0] if not found.is_empty() else null
+	anim = AnimationPlayer.new()
+	anim.name = "AnimationPlayer"
+	model.add_child(anim)
+	if skeleton:
+		anim.root_node = anim.get_path_to(skeleton.get_parent())
+		var lib := AnimationLibrary.new()
+		var conv := _hero_animations(skeleton)
+		for n in conv:
+			lib.add_animation(n, conv[n])
+		anim.add_animation_library("", lib)
 	_attach_weapon(DRESS[kind].weapon)
 	_find_anim()
 	_add_battle_anims()
 
 
+## player.glb's animations as Skeleton3D tracks (made once, shared by every rebuilt hero): a node track
+## "root/hips/spine" becomes "<Skeleton3D>:spine". The rig's rest rotations are the identity and its bones
+## sit at player.glb's pivots, so the keys carry over unchanged.
+static var _hero_anim_cache := {}
+
+static func _hero_animations(skel: Skeleton3D) -> Dictionary:
+	var prefix := String(skel.name) + ":"
+	if _hero_anim_cache.has(prefix):
+		return _hero_anim_cache[prefix]
+	var out := {}
+	var src := (load(PLAYER_MODEL) as PackedScene).instantiate()
+	var players := src.find_children("*", "AnimationPlayer", true, false)
+	if not players.is_empty():
+		var ap := players[0] as AnimationPlayer
+		for n in ap.get_animation_list():
+			var a := ap.get_animation(n)
+			var b := Animation.new()
+			b.length = a.length
+			b.loop_mode = a.loop_mode
+			for t in a.get_track_count():
+				var path := a.track_get_path(t)
+				var bone := String(path.get_name(path.get_name_count() - 1))
+				if skel.find_bone(bone) < 0:
+					continue
+				var nt := b.add_track(a.track_get_type(t))
+				b.track_set_path(nt, NodePath(prefix + bone))
+				b.track_set_interpolation_type(nt, a.track_get_interpolation_type(t))
+				for k in a.track_get_key_count(t):
+					b.track_insert_key(nt, a.track_get_key_time(t, k), a.track_get_key_value(t, k), a.track_get_key_transition(t, k))
+			out[n] = b
+	src.free()
+	_hero_anim_cache[prefix] = out
+	return out
+
+
 ## A rebuilt model's mesh "<piece>__<material>" gets assets/models/hd/<material>.png (one material
 ## per kind per actor, so the hit flash reaches all of them).
+func _dress_hd(mi: MeshInstance3D, mats: Dictionary) -> void:
+	mi.material_override = _hd_material(String(mi.name), mats)
+	if String(mi.name).ends_with("_fur"):
+		# fur tufts (alpha cards) cast no shadow: their stripes would darken the whole body under them
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 func _hd_material(mesh_name: String, mats: Dictionary) -> ShaderMaterial:
 	var key := mesh_name.get_slice("__", 1)
 	if key == "" or not ResourceLoader.exists(HD_DIR + key + ".png"):
 		key = "iron"
 	if not mats.has(key):
-		var m := Materials.material(HD_DIR + key + ".png", {"double_sided": true, "alpha_cut": key == "emblem"}, true)
+		var cut := key == "emblem" or key.ends_with("_rag") or key.ends_with("_fur") or key.ends_with("_cloth")
+		var m := Materials.material(HD_DIR + key + ".png", {"double_sided": true, "alpha_cut": cut,
+			"self_lit": 1.0 if key.ends_with("_glow") else 0.0}, true)
 		mats[key] = m
 		_materials.append(m)
 	return mats[key]
@@ -131,6 +186,12 @@ func _hd_material(mesh_name: String, mats: Dictionary) -> ShaderMaterial:
 
 func _attach_weapon(id: String) -> void:
 	var hand: Node3D = bones.get("hand_r")
+	if skeleton and skeleton.find_bone("hand_r") >= 0:
+		var att := BoneAttachment3D.new()
+		att.name = "HandR"
+		skeleton.add_child(att)
+		att.bone_name = "hand_r"
+		hand = att
 	if hand == null:
 		return
 	if ResourceLoader.exists(HD_DIR + id + "_hd.glb"):
@@ -139,7 +200,7 @@ func _attach_weapon(id: String) -> void:
 		hand.add_child(hw)
 		var mats := {}
 		for mi in hw.find_children("*", "MeshInstance3D", true, false):
-			(mi as MeshInstance3D).material_override = _hd_material(String(mi.name), mats)
+			_dress_hd(mi as MeshInstance3D, mats)
 			_meshes.append(mi)
 		return
 	if not ResourceLoader.exists(WEAPON_DIR + id + ".glb"):
@@ -156,15 +217,21 @@ func _attach_weapon(id: String) -> void:
 
 func _build_monster() -> void:
 	var m: Dictionary = MONSTERS[kind]
-	model = (load(m.model) as PackedScene).instantiate()
+	model = (load(m.hd) as PackedScene).instantiate()
 	model.scale = Vector3.ONE * float(m.scale)
 	add_child(model)
 	_collect(model)
-	var mat := Materials.material(m.texture, {}, true)
-	var cut := Materials.material(m.texture, {"double_sided": true, "alpha_cut": true}, true)
-	_materials.append_array([mat, cut])
+	var mats := {}
 	for mi in _meshes:
-		mi.material_override = cut if String(mi.name).contains("cloth") else mat
+		_dress_hd(mi, mats)
+	var found := model.find_children("*", "Skeleton3D", true, false)
+	skeleton = found[0] if not found.is_empty() else null
+	if m.has("anims"):
+		var src := (load(m.anims) as PackedScene).instantiate()
+		var players := src.find_children("*", "AnimationPlayer", true, false)
+		if not players.is_empty():
+			model.add_child((players[0] as AnimationPlayer).duplicate())
+		src.free()
 	_find_anim()
 
 
@@ -332,7 +399,8 @@ func _add_battle_anims() -> void:
 	lib.add_animation("revive", _pose_anim([[0.0, knelt], [0.4, rise]]))
 
 
-## An Animation from pose keys: [[time, {bone: euler degrees, "hips_y": metres}], ...].
+## An Animation from pose keys: [[time, {bone: euler degrees, "hips_y": metres}], ...]. On a skinned
+## model the tracks drive the Skeleton3D's bones (rest rotations are the identity, so the same angles work).
 func _pose_anim(keys: Array) -> Animation:
 	var a := Animation.new()
 	a.length = float(keys[-1][0])
@@ -342,20 +410,30 @@ func _pose_anim(keys: Array) -> Animation:
 		for b in (k[1] as Dictionary).keys():
 			names[b] = true
 	for b in names.keys():
+		var bone: String = "hips" if b == "hips_y" else b
+		var path := NodePath()
+		var base := Vector3.ZERO
+		if skeleton:
+			var i := skeleton.find_bone(bone)
+			if i < 0:
+				continue
+			path = NodePath(String(root.get_path_to(skeleton)) + ":" + bone)
+			base = skeleton.get_bone_rest(i).origin
+		else:
+			if not bones.has(bone):
+				continue
+			path = root.get_path_to(bones[bone])
+			base = (bones[bone] as Node3D).position
 		if b == "hips_y":
-			var hips: Node3D = bones["hips"]
 			var tr := a.add_track(Animation.TYPE_POSITION_3D)
-			a.track_set_path(tr, root.get_path_to(hips))
-			var base := hips.position
+			a.track_set_path(tr, path)
 			var last := 0.0
 			for k in keys:
 				last = float((k[1] as Dictionary).get("hips_y", last))
 				a.position_track_insert_key(tr, float(k[0]), base + Vector3(0, last, 0))
 			continue
-		if not bones.has(b):
-			continue
 		var tr := a.add_track(Animation.TYPE_ROTATION_3D)
-		a.track_set_path(tr, root.get_path_to(bones[b]))
+		a.track_set_path(tr, path)
 		var last := Vector3.ZERO
 		for k in keys:
 			last = (k[1] as Dictionary).get(b, last)

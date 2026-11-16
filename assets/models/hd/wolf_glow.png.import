@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://48lujcoaurx4"
-path="res://.godot/imported/hollow_wolf.png-5da8741753565ac26326a8b0df2ef9be.ctex"
+uid="uid://gh7odm2jfk86"
+path="res://.godot/imported/wolf_glow.png-b18bfe7e9d6d6d7c78950d1e47f56452.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/models/hollow_wolf/hollow_wolf.png"
-dest_files=["res://.godot/imported/hollow_wolf.png-5da8741753565ac26326a8b0df2ef9be.ctex"]
+source_file="res://assets/models/hd/wolf_glow.png"
+dest_files=["res://.godot/imported/wolf_glow.png-b18bfe7e9d6d6d7c78950d1e47f56452.ctex"]
 
 [params]
 

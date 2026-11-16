@@ -4,7 +4,10 @@ A tiny JRPG demo for the Miasma sequel idea: walk a stretch of Emberwick's outsk
 in third person, bump into a monster, and fight it with Legend of Dragoon-style timed combos.
 Godot 4.7.2, Forward+ renderer. The look (Cody's pick, 2026-11-15): real lighting and fog on crisp
 pixel-art textures, higher-detail textures and models rebuilt in Blender ("look B" of the look test;
-the PS1 look is gone). Kael and the monsters still use Miasma's models until they're rebuilt.
+the PS1 look is gone). The Guard, Kael, the Hollow Wolf and the Skeleton are all Blender-built; the people
+and the wolf are skinned on real rigs.
+
+**Getting updates:** close Godot, double-click `pull.bat` (GitHub: quadrupedgamingstudio/miasma-2).
 
 Design: `claude/miasma-2-design.md` in the Project. Technical notes and asset list:
 `claude/miasma-2-prototype.md`.
@@ -22,8 +25,8 @@ Design: `claude/miasma-2-design.md` in the Project. Technical notes and asset li
 ## Files
 - `scripts/data/tuning.gd`: every number (stats, combo timings, press windows, damage, speeds, camera).
 - `scripts/game.gd`: autoload; input map, party state, field <-> battle switching.
-- `scripts/actor.gd`: a character model (party: Miasma's player model dressed two ways; monsters:
-  Miasma's skeleton and Hollow Wolf) plus the party's battle animations, made in code.
+- `scripts/actor.gd`: a character model (the rebuilt heroes and monsters from `assets/models/hd/`),
+  player.glb's walk/run/idle converted onto the heroes' rig, and the party's battle animations made in code.
 - `scripts/world_kit.gd`: scenery built in code (ground, trees, rocks, stakes, campfire, mist, sky).
 - `scripts/field/`: the field (`field.gd`), leader, follower, camera, roaming monsters.
 - `scripts/battle/`: the battle flow (`battle.gd`), fighters, camera, UI, the timing prompt.
@@ -31,7 +34,9 @@ Design: `claude/miasma-2-design.md` in the Project. Technical notes and asset li
 - `scripts/look.gd`: lighting, fog and the screen dither; `scripts/materials.gd`: every material;
   `shaders/lit*.gdshader`: the surfaces; `shaders/dither_post.gdshader`: the dither.
 - `assets/textures_hd/`: the higher-detail textures, made by `tools/textures/gen_hd.py`.
-- `assets/models/hd/`: the rebuilt Guard and broadsword (+ textures), made in Blender by
-  `tools/models/guard_hd.py` (`pip install bpy`, then `python3 tools/models/guard_hd.py`).
-- `tools/test/`: screenshot drivers (`shoot.sh shot_field`, `shot_portrait`, `battle_auto`; Forward+ needs
+- `assets/models/hd/`: the rebuilt models and their textures, made in Blender by scripts in `tools/models/`
+  (`pip install bpy`, then e.g. `python3 tools/models/guard_hd.py`): `rig_kit.py` (shared: rigs, skinning,
+  shapes, animation keys), `guard_hd.py`, `kael_hd.py`, `hollow_wolf_hd.py`, `skeleton_hd.py`.
+- `tools/test/`: screenshot drivers (`shoot.sh shot_field`, `shot_portrait`, `shot_rig` (every model in key
+  poses; `RIG=guard,kael`), `battle_auto`; Forward+ needs
   Vulkan: `DRIVER=vulkan`, the default).
