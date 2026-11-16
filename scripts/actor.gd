@@ -11,6 +11,9 @@ const PLAYER_MODEL := "res://assets/models/player/player.glb"
 const PLAYER_TEXTURE := "res://assets/models/player/player_s%d_h%d.png"
 const WEAPON_DIR := "res://assets/models/weapons/"
 const WEAPON_TEXTURE := "res://assets/models/weapons/weapons.png"
+## Models rebuilt in Blender and their textures, made by tools/models/guard_hd.py. A hero or weapon
+## with an "<id>_hd.glb" here uses it; the rest still use Miasma's models until they're rebuilt.
+const HD_DIR := "res://assets/models/hd/"
 ## Where a weapon sits in the right hand (copied from Miasma's scripts/player_body.gd).
 const GRIP := Vector3(-0.006, -0.072, 0.0)
 const GRIP_BASIS := Basis(Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(0, 1, 0))
@@ -53,6 +56,9 @@ static func make(id: String) -> Actor:
 
 
 func _build_hero() -> void:
+	if ResourceLoader.exists(HD_DIR + kind + "_hd.glb"):
+		_build_hero_hd()
+		return
 	var d: Dictionary = DRESS[kind]
 	model = (load(PLAYER_MODEL) as PackedScene).instantiate()
 	add_child(model)
@@ -60,8 +66,8 @@ func _build_hero() -> void:
 	var tex := PLAYER_TEXTURE % [d.skin, d.hair_color]
 	if not ResourceLoader.exists(tex):
 		tex = "res://assets/models/player/player.png"
-	var mat := Ps1.material(tex, {}, true)
-	var glow := Ps1.material(tex, {"self_lit": 1.0}, true)
+	var mat := Materials.material(tex, {}, true)
+	var glow := Materials.material(tex, {"self_lit": 1.0}, true)
 	_materials.append_array([mat, glow])
 	var worn := {}
 	for id in d.armor:
@@ -90,14 +96,58 @@ func _build_hero() -> void:
 	_add_battle_anims()
 
 
+## A rebuilt hero. Same bones as player.glb, so it borrows that model's AnimationPlayer
+## (walk, run, idle...) and gets the same battle animations made in code below.
+func _build_hero_hd() -> void:
+	model = (load(HD_DIR + kind + "_hd.glb") as PackedScene).instantiate()
+	add_child(model)
+	_collect(model)
+	var mats := {}
+	for mi in _meshes:
+		mi.material_override = _hd_material(String(mi.name), mats)
+	var src := (load(PLAYER_MODEL) as PackedScene).instantiate()
+	var found := src.find_children("*", "AnimationPlayer", true, false)
+	if not found.is_empty():
+		var copy := (found[0] as AnimationPlayer).duplicate() as AnimationPlayer
+		model.add_child(copy)
+	src.free()
+	_attach_weapon(DRESS[kind].weapon)
+	_find_anim()
+	_add_battle_anims()
+
+
+## A rebuilt model's mesh "<piece>__<material>" gets assets/models/hd/<material>.png (one material
+## per kind per actor, so the hit flash reaches all of them).
+func _hd_material(mesh_name: String, mats: Dictionary) -> ShaderMaterial:
+	var key := mesh_name.get_slice("__", 1)
+	if key == "" or not ResourceLoader.exists(HD_DIR + key + ".png"):
+		key = "iron"
+	if not mats.has(key):
+		var m := Materials.material(HD_DIR + key + ".png", {"double_sided": true, "alpha_cut": key == "emblem"}, true)
+		mats[key] = m
+		_materials.append(m)
+	return mats[key]
+
+
 func _attach_weapon(id: String) -> void:
 	var hand: Node3D = bones.get("hand_r")
-	if hand == null or not ResourceLoader.exists(WEAPON_DIR + id + ".glb"):
+	if hand == null:
+		return
+	if ResourceLoader.exists(HD_DIR + id + "_hd.glb"):
+		var hw: Node3D = (load(HD_DIR + id + "_hd.glb") as PackedScene).instantiate()
+		hw.transform = Transform3D(GRIP_BASIS, GRIP)
+		hand.add_child(hw)
+		var mats := {}
+		for mi in hw.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = _hd_material(String(mi.name), mats)
+			_meshes.append(mi)
+		return
+	if not ResourceLoader.exists(WEAPON_DIR + id + ".glb"):
 		return
 	var w: Node3D = (load(WEAPON_DIR + id + ".glb") as PackedScene).instantiate()
 	w.transform = Transform3D(GRIP_BASIS, GRIP)
 	hand.add_child(w)
-	var wmat := Ps1.material(WEAPON_TEXTURE, {}, true)
+	var wmat := Materials.material(WEAPON_TEXTURE, {}, true)
 	_materials.append(wmat)
 	for mi in w.find_children("*", "MeshInstance3D", true, false):
 		(mi as MeshInstance3D).material_override = wmat
@@ -110,8 +160,8 @@ func _build_monster() -> void:
 	model.scale = Vector3.ONE * float(m.scale)
 	add_child(model)
 	_collect(model)
-	var mat := Ps1.material(m.texture, {}, true)
-	var cut := Ps1.material(m.texture, {"double_sided": true, "alpha_cut": true}, true)
+	var mat := Materials.material(m.texture, {}, true)
+	var cut := Materials.material(m.texture, {"double_sided": true, "alpha_cut": true}, true)
 	_materials.append_array([mat, cut])
 	for mi in _meshes:
 		mi.material_override = cut if String(mi.name).contains("cloth") else mat

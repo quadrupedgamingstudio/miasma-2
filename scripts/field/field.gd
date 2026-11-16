@@ -19,7 +19,7 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.seed = 7
-	Ps1.apply_look()
+	Look.setup(self)
 	_build_world()
 	_spawn_party()
 	_spawn_monsters()
@@ -65,8 +65,9 @@ static func heal_at(x: float, z: float) -> float:
 
 
 func _build_world() -> void:
-	var g := WorldKit.ground(-SIZE - 10, -SIZE - 10, SIZE + 10, SIZE + 10, 2.0, height_at,
-		func(x: float, z: float) -> String: return "dirt" if absf(x - road_x(z)) < 1.3 else "grass", heal_at)
+	var g := WorldKit.ground(-SIZE - 10, -SIZE - 10, SIZE + 10, SIZE + 10, 1.0, height_at,
+		func(x: float, z: float) -> String: return "dirt" if absf(x - road_x(z)) < 1.3 else "grass", heal_at,
+		func(x: float, z: float) -> float: return 1.0 - smoothstep(0.8, 1.8, absf(x - road_x(z))))
 	add_child(g[0])
 	add_child(g[1])
 	add_child(WorldKit.sky(Color(0.42, 0.52, 0.72), Tuning.FOG_COLOR))
@@ -105,7 +106,7 @@ func _build_world() -> void:
 		WorldKit.grass_tuft(st, Vector3(x, height_at(x, z) - 0.05, z), _rng.randf_range(0.4, 0.8), _rng.randf() * PI)
 	var tufts := MeshInstance3D.new()
 	tufts.mesh = st.commit()
-	tufts.material_override = Ps1.material("res://assets/textures/forest_grass.png", {"double_sided": true, "tint": Color(0.85, 1.0, 0.7)})
+	tufts.material_override = WorldKit.tuft_material()
 	add_child(tufts)
 
 	# Emberwick's old palisade, south, along the road's end
@@ -174,7 +175,7 @@ func _build_world() -> void:
 func _process(delta: float) -> void:
 	_fire_t += delta
 	var flick := 1.4 + sin(_fire_t * 11.0) * 0.15 + sin(_fire_t * 23.0) * 0.1
-	Ps1.set_light(0, _fire.global_position + Vector3(0, 0.8, 0), flick, Color(1.0, 0.6, 0.3), 6.0)
+	Materials.set_light(0, _fire.global_position + Vector3(0, 0.8, 0), flick, Color(1.0, 0.6, 0.3), 6.0)
 	var flame := _fire.get_node("Flame") as MeshInstance3D
 	flame.scale = Vector3(1.0, 0.9 + sin(_fire_t * 9.0) * 0.12, 1.0)
 

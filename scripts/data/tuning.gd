@@ -117,11 +117,41 @@ const RUN_BACK := 0.4
 ## Battle camera field of view.
 const BATTLE_FOV := 45.0
 
-# --- Look ---------------------------------------------------------------------------------------------
-const AMBIENT := Color(0.42, 0.42, 0.48)
+# --- Look (scripts/look.gd) --------------------------------------------------------------------------
+## The sun's direction and colour, and the haze colour (fog, sky's horizon, background).
 const SUN_DIRECTION := Vector3(0.45, 0.8, 0.35)
-const SUN_STRENGTH := 0.75
 const SUN_COLOR := Color(1.0, 0.93, 0.8)
 const FOG_COLOR := Color(0.62, 0.6, 0.66)
-const FOG_START := 16.0
-const FOG_END := 52.0
+## The 3D's resolution as a share of the window's (1 = full; 0.5 = half, chunkier and faster).
+const LOOK_3D_SCALE := 1.0
+## Colour levels per channel for the screen dither (0 = off; lower = harder banding).
+const LOOK_DITHER_LEVELS := 36.0
+## Size of a dither cell in screen pixels.
+const LOOK_DITHER_PIXEL := 1.0
+## Lighting.
+const LIT_SUN_ENERGY := 1.7
+const LIT_AMBIENT_COLOR := Color(0.62, 0.64, 0.75)
+const LIT_AMBIENT_ENERGY := 0.38
+const LIT_EXPOSURE := 0.95
+## Picture contrast and colour strength (1 = unchanged).
+const LIT_CONTRAST := 1.12
+const LIT_SATURATION := 0.95
+## Distance fog (exponential): higher = the land fades sooner.
+const LIT_FOG_DENSITY := 0.014
+## Fog you can see in the air, lit by the sun and the fire (0 = off). Colour and glow of the miasma in it.
+const LIT_VOLUMETRIC_DENSITY := 0.007
+const LIT_VOLUMETRIC_ALBEDO := Color(0.78, 0.72, 0.86)
+const LIT_VOLUMETRIC_EMISSION := Color(0.03, 0.02, 0.05)
+const LIT_VOLUMETRIC_LENGTH := 48.0
+const LIT_SHADOW_DISTANCE := 45.0
+const LIT_SSAO := true
+## Glow round bright things (the fire, flames, later the ether crystals). 0 = off.
+const LIT_GLOW := 0.7
+## Surfaces: roughness (1 = chalky, 0 = glossy) and how much they catch the sun.
+const LIT_ROUGHNESS := 0.85
+const LIT_SPECULAR := 0.25
+## How brightly self-lit things (flames) shine in the lit looks.
+const LIT_SELF_LIT_GLOW := 2.2
+## Lamps (the campfire): brightness and reach, times the numbers each lamp passes in (strength, radius).
+const LIT_LAMP_ENERGY := 1.6
+const LIT_LAMP_RANGE := 1.5

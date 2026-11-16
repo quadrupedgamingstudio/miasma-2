@@ -21,7 +21,7 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.seed = 11
-	Ps1.apply_look()
+	Look.setup(self)
 	_build_arena()
 	cam = BattleCamera.new()
 	add_child(cam)
@@ -52,9 +52,10 @@ static func arena_height(x: float, z: float) -> float:
 
 
 func _build_arena() -> void:
-	var g := WorldKit.ground(-30, -30, 30, 30, 2.0, arena_height,
+	var g := WorldKit.ground(-30, -30, 30, 30, 1.0, arena_height,
 		func(x: float, z: float) -> String: return "dirt" if absf(x * 0.3 + z - 0.5) < 1.4 and absf(x) > 3.0 else "grass",
-		func(x: float, z: float) -> float: return clampf(0.55 + z * 0.02 + sin(x * 0.5) * 0.1, 0.0, 1.0))
+		func(x: float, z: float) -> float: return clampf(0.55 + z * 0.02 + sin(x * 0.5) * 0.1, 0.0, 1.0),
+		func(x: float, z: float) -> float: return (1.0 - smoothstep(0.9, 1.9, absf(x * 0.3 + z - 0.5))) * smoothstep(2.4, 3.6, absf(x)))
 	add_child(g[0])
 	add_child(g[1])
 	add_child(WorldKit.sky(Color(0.42, 0.52, 0.72), Tuning.FOG_COLOR))
@@ -82,7 +83,7 @@ func _build_arena() -> void:
 		WorldKit.grass_tuft(st, Vector3(x, arena_height(x, z) - 0.05, z), _rng.randf_range(0.4, 0.8), _rng.randf() * PI)
 	var tufts := MeshInstance3D.new()
 	tufts.mesh = st.commit()
-	tufts.material_override = Ps1.material("res://assets/textures/forest_grass.png", {"double_sided": true, "tint": Color(0.85, 1.0, 0.7)})
+	tufts.material_override = WorldKit.tuft_material()
 	add_child(tufts)
 	for i in 10:
 		var a := TAU * i / 10.0

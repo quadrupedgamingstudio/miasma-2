@@ -27,13 +27,13 @@ var font_small: Font
 
 
 func _ready() -> void:
+	get_tree().root.scaling_3d_scale = Tuning.LOOK_3D_SCALE
 	_setup_input()
 	reset_party()
 	font = load("res://assets/fonts/Galmuri9.ttf")
 	font_small = load("res://assets/fonts/Galmuri7.ttf")
 	transition = Transition.new()
 	add_child(transition)
-	Ps1.apply_look()
 	# test hook: godot --path . -- --driver=res://tools/test/<driver>.gd
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--driver="):

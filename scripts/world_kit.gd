@@ -12,7 +12,10 @@ const TEX := "res://assets/textures/%s.png"
 ## A height field from (x0, z0) to (x1, z1) on `cell` squares. height(x, z) -> metres;
 ## kind(x, z) -> "grass" or "dirt"; heal(x, z) -> 0 (miasma-scarred, grey) .. 1 (healthy green).
 ## Returns [MeshInstance3D, StaticBody3D].
-static func ground(x0: float, z0: float, x1: float, z1: float, cell: float, height: Callable, kind: Callable, heal: Callable) -> Array:
+## blend(x, z) -> 0..1 (optional): instead of square-by-square grass and dirt, one surface where the
+## dirt is painted in by this weight, with a ragged pixel edge (the road's verges).
+static func ground(x0: float, z0: float, x1: float, z1: float, cell: float, height: Callable, kind: Callable, heal: Callable, blend := Callable()) -> Array:
+	var blended := blend.is_valid()
 	var tools := {}
 	var nx := int(ceil((x1 - x0) / cell))
 	var nz := int(ceil((z1 - z0) / cell))
@@ -23,7 +26,7 @@ static func ground(x0: float, z0: float, x1: float, z1: float, cell: float, heig
 			var za := z0 + iz * cell
 			var xb := xa + cell
 			var zb := za + cell
-			var k: String = kind.call(xa + cell * 0.5, za + cell * 0.5)
+			var k: String = "grass" if blended else String(kind.call(xa + cell * 0.5, za + cell * 0.5))
 			if not tools.has(k):
 				var st := SurfaceTool.new()
 				st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -43,9 +46,12 @@ static func ground(x0: float, z0: float, x1: float, z1: float, cell: float, heig
 					n = -n
 				for i in [t[0], t[1], t[2]]:
 					var v: Vector3 = p[i]
-					st.set_normal(n)
+					st.set_normal(_smooth_normal(height, v.x, v.z))
 					st.set_uv(uv[i])
-					st.set_color(_tint(k, float(heal.call(v.x, v.z)), v))
+					var col := _tint(k, float(heal.call(v.x, v.z)), v)
+					if blended:
+						col.a = clampf(float(blend.call(v.x, v.z)), 0.0, 1.0)
+					st.set_color(col)
 					st.add_vertex(v)
 				faces.append_array([a, b, c])
 	var mesh := ArrayMesh.new()
@@ -53,7 +59,11 @@ static func ground(x0: float, z0: float, x1: float, z1: float, cell: float, heig
 		var st: SurfaceTool = tools[k]
 		st.commit(mesh)
 		var tex: String = "forest_grass" if k == "grass" else ("dirt" if k == "dirt" else String(k))
-		mesh.surface_set_material(mesh.get_surface_count() - 1, Ps1.material(TEX % tex, {"vertex_color": true}))
+		var opts := {"vertex_color": true}
+		if blended:
+			opts["blend_texture"] = TEX % "dirt"
+			opts["blend_tint"] = Color(0.95, 0.9, 0.86)
+		mesh.surface_set_material(mesh.get_surface_count() - 1, Materials.material(TEX % tex, opts))
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.name = "Ground"
@@ -66,6 +76,13 @@ static func ground(x0: float, z0: float, x1: float, z1: float, cell: float, heig
 	shape.shape = con
 	body.add_child(shape)
 	return [mi, body]
+
+
+static func _smooth_normal(height: Callable, x: float, z: float) -> Vector3:
+	var e := 0.5
+	var dx: float = height.call(x - e, z) - height.call(x + e, z)
+	var dz: float = height.call(x, z - e) - height.call(x, z + e)
+	return Vector3(dx, 2.0 * e, dz).normalized()
 
 
 static func _tint(k: String, heal: float, v: Vector3) -> Color:
@@ -82,6 +99,8 @@ static func _tint(k: String, heal: float, v: Vector3) -> Color:
 
 ## A tapered n-sided prism from radius r0 at y0 to r1 at y1 (a trunk, a stake, a branch).
 static func prism(st: SurfaceTool, base: Transform3D, r0: float, r1: float, h: float, sides := 6, uv_h := 1.0) -> void:
+	sides *= 2   # rounder than the PS1 props these numbers came from
+	var smooth := true
 	for i in sides:
 		var a0 := TAU * i / sides
 		var a1 := TAU * (i + 1) / sides
@@ -92,7 +111,12 @@ static func prism(st: SurfaceTool, base: Transform3D, r0: float, r1: float, h: f
 		var n := (base.basis * Vector3(cos((a0 + a1) * 0.5), 0.2, sin((a0 + a1) * 0.5))).normalized()
 		var u0 := float(i) / sides
 		var u1 := float(i + 1) / sides
-		_quad(st, [p00, p01, p11, p10], [Vector2(u0, uv_h), Vector2(u0, 0), Vector2(u1, 0), Vector2(u1, uv_h)], n)
+		if smooth:
+			var n0 := (base.basis * Vector3(cos(a0), 0.2, sin(a0))).normalized()
+			var n1 := (base.basis * Vector3(cos(a1), 0.2, sin(a1))).normalized()
+			_quad_n(st, [p00, p01, p11, p10], [Vector2(u0, uv_h), Vector2(u0, 0), Vector2(u1, 0), Vector2(u1, uv_h)], [n0, n0, n1, n1])
+		else:
+			_quad(st, [p00, p01, p11, p10], [Vector2(u0, uv_h), Vector2(u0, 0), Vector2(u1, 0), Vector2(u1, uv_h)], n)
 	if r1 > 0.001:
 		var top := base * Vector3(0, h, 0)
 		for i in sides:
@@ -128,10 +152,17 @@ static func _quad(st: SurfaceTool, p: Array, uv: Array, n: Vector3) -> void:
 		st.add_vertex(p[i])
 
 
+static func _quad_n(st: SurfaceTool, p: Array, uv: Array, n: Array) -> void:
+	for i in [0, 1, 2, 0, 2, 3]:
+		st.set_normal(n[i])
+		st.set_uv(uv[i])
+		st.add_vertex(p[i])
+
+
 static func _commit(st: SurfaceTool, tex: String, opts := {}) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
-	mi.material_override = Ps1.material(TEX % tex, opts)
+	mi.material_override = Materials.material(TEX % tex, opts)
 	return mi
 
 
@@ -197,8 +228,8 @@ static func rock(rng: RandomNumberGenerator, size := 1.0) -> Node3D:
 	var root := Node3D.new()
 	var st := _new_st()
 	var mesh := SphereMesh.new()
-	mesh.radial_segments = 7
-	mesh.rings = 4
+	mesh.radial_segments = 14
+	mesh.rings = 8
 	mesh.radius = size
 	mesh.height = size * 1.4
 	var arr := mesh.get_mesh_arrays()
@@ -275,7 +306,7 @@ static func cart() -> Node3D:
 
 
 ## A campfire: a ring of stones, logs and a flickering flame. Returns the node; the flame's light is
-## set by whoever owns it (Ps1.set_light).
+## set by whoever owns it (Materials.set_light).
 static func campfire(rng: RandomNumberGenerator) -> Node3D:
 	var root := Node3D.new()
 	var st := _new_st()
@@ -293,7 +324,7 @@ static func campfire(rng: RandomNumberGenerator) -> Node3D:
 	q.size = Vector2(0.7, 0.9)
 	q.center_offset = Vector3(0, 0.45, 0)
 	flame.mesh = q
-	flame.material_override = Ps1.material(TEX % "flame", {"self_lit": 1.0, "alpha_cut": true, "billboard": true, "double_sided": true})
+	flame.material_override = Materials.material(TEX % "flame", {"self_lit": 1.0, "alpha_cut": true, "billboard": true, "double_sided": true})
 	flame.name = "Flame"
 	root.add_child(flame)
 	var cyl := CylinderShape3D.new()
@@ -310,9 +341,16 @@ static func mist(width: float, height: float) -> MeshInstance3D:
 	q.size = Vector2(width, height)
 	q.center_offset = Vector3(0, height * 0.5, 0)
 	mi.mesh = q
-	mi.material_override = Ps1.material(TEX % "forest_mist", {"double_sided": true, "self_lit": 0.6,
+	mi.material_override = Materials.material(TEX % "forest_mist", {"double_sided": true, "self_lit": 0.6,
 		"tint": Color(0.75, 0.6, 0.85), "fade": 0.3, "uv_scale": Vector2(width / 6.0, 1.0)})
 	return mi
+
+
+## The grass tufts' material: real blades with see-through gaps (textures_hd/grass_tuft.png).
+static func tuft_material() -> ShaderMaterial:
+	if ResourceLoader.exists("res://assets/textures_hd/grass_tuft.png"):
+		return Materials.material("res://assets/textures_hd/grass_tuft.png", {"double_sided": true, "alpha_cut": true, "tint": Color(0.85, 1.0, 0.75)})
+	return Materials.material("res://assets/textures/forest_grass.png", {"double_sided": true, "tint": Color(0.85, 1.0, 0.7)})
 
 
 ## A tuft of grass: two crossed quads.
@@ -321,7 +359,8 @@ static func grass_tuft(st: SurfaceTool, at: Vector3, size: float, yaw: float) ->
 		var b := Basis(Vector3.UP, yaw + k * PI * 0.5)
 		var r := b * Vector3(size * 0.5, 0, 0)
 		var up := Vector3(0, size * 0.7, 0)
-		_quad(st, [at - r, at - r + up, at + r + up, at + r], [Vector2(0, 1), Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)], b * Vector3(0, 0, 1))
+		# tufts take the ground's light (normal up) so they melt into it
+		_quad(st, [at - r, at - r + up, at + r + up, at + r], [Vector2(0, 1), Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)], Vector3.UP)
 
 
 ## A sky dome: a big inverted sphere with a gradient, drawn behind everything (no fog).

@@ -1,0 +1,26 @@
+Look test: three switchable art directions (PS1 / A / B), Forward+
+
+- Move rendering to Forward+; the PS1 look is kept as it was (unshaded shader, 320x240).
+- scripts/look.gd: looks "ps1", "a" (Miasma's models, real sun/fire lighting, shadows,
+  volumetric fog, SSAO, glow, screen dither, full-res 3D) and "b" (A + HD textures,
+  smooth/finer ground with a blended road, rounder props, alpha grass tufts, the Guard
+  and broadsword rebuilt in Blender). F2 cycles them; Tuning.LOOK picks the start.
+- Ps1.material() hands out lit shaders (shaders/lit*.gdshader) with the same parameters,
+  so callers are unchanged; Ps1.set_light() drives real OmniLights in lit looks.
+- tools/textures/gen_hd.py: 256 px textures coloured from the originals' own palettes.
+- tools/models/guard_hd.py (Blender/bpy): the Guard on player.glb's skeleton (borrows its
+  animations), 4.5k tris, 64 px pixel-art material tiles; broadsword 324 tris.
+- Look numbers in scripts/data/tuning.gd ("Look test" section).
+- Test drivers shot_portrait, shot_cycle; comparison sheets in tools/look_test/.
+
+Then, the same evening: Look B only: remove the PS1 and A looks (Cody's call)
+
+- One look: lit surfaces, HD textures, smooth ground, rounder props, rebuilt models.
+- scripts/ps1.gd -> scripts/materials.gd (class Materials); the PS1 shaders and their
+  shader globals are gone; F2 / look_next and the shot_cycle driver are gone.
+- scripts/look.gd keeps the lighting/fog/dither setup and the HD texture fallback.
+- Stretch mode canvas_items in project.godot (3D at window resolution, HUD at 320x240).
+- Tuning: the "Look" section now holds only the look's numbers.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Xd3n7Y7sbaL7gRSPXufsQb

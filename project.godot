@@ -13,7 +13,7 @@ config_version=5
 config/name="Miasma II (JRPG demo)"
 config/description="A tiny PS1-style JRPG demo: walk a small area, then fight with Legend of Dragoon-style timed combos."
 run/main_scene="res://scenes/field.tscn"
-config/features=PackedStringArray("4.4", "GL Compatibility")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.png"
 config/windows_native_icon="res://icon.ico"
 
@@ -27,7 +27,7 @@ window/size/viewport_width=320
 window/size/viewport_height=240
 window/size/window_width_override=960
 window/size/window_height_override=720
-window/stretch/mode="viewport"
+window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [layer_names]
@@ -40,75 +40,7 @@ window/stretch/aspect="expand"
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
-renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0, 0, 0, 1)
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true
-
-[shader_globals]
-
-ps1_ambient={
-"type": "vec4",
-"value": Vector4(0.42, 0.42, 0.48, 1)
-}
-ps1_sun={
-"type": "vec4",
-"value": Vector4(0.45, 0.8, 0.35, 0.75)
-}
-ps1_sun_color={
-"type": "vec4",
-"value": Vector4(1, 0.93, 0.8, 1)
-}
-ps1_fog_color={
-"type": "vec4",
-"value": Vector4(0.55, 0.55, 0.6, 1)
-}
-ps1_fog_range={
-"type": "vec2",
-"value": Vector2(14, 48)
-}
-ps1_snap={
-"type": "vec2",
-"value": Vector2(320, 240)
-}
-ps1_affine={
-"type": "float",
-"value": 1.0
-}
-ps1_dither={
-"type": "float",
-"value": 1.0
-}
-ps1_light0={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-ps1_light_color0={
-"type": "vec4",
-"value": Vector4(1, 1, 1, 1)
-}
-ps1_light1={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-ps1_light_color1={
-"type": "vec4",
-"value": Vector4(1, 1, 1, 1)
-}
-ps1_light2={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-ps1_light_color2={
-"type": "vec4",
-"value": Vector4(1, 1, 1, 1)
-}
-ps1_light3={
-"type": "vec4",
-"value": Vector4(0, 0, 0, 0)
-}
-ps1_light_color3={
-"type": "vec4",
-"value": Vector4(1, 1, 1, 1)
-}
