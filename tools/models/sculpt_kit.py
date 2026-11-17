@@ -1,4 +1,7 @@
-"""Second-pass model kit (Cody 2026-11-15: "proper" Blender models that keep Miasma's vibe).
+"""RETIRED (Cody 2026-11-16): Kael's sculpt looked "terrible" in the game; models are built the Guard's way
+(rig_kit.py pieces) again. Kept for reference; nothing uses it now.
+
+Second-pass model kit (Cody 2026-11-15: "proper" Blender models that keep Miasma's vibe).
 
 A model is still written as shapes in bone frames (rig_kit.py's loft / ellipsoid / box and the shapes below),
 but they are no longer what ships. The pipeline (`Sculpt.finish()`):

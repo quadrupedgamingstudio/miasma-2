@@ -36,10 +36,9 @@ Design: `claude/miasma-2-design.md` in the Project. Technical notes and asset li
 - `assets/textures_hd/`: the higher-detail textures, made by `tools/textures/gen_hd.py`.
 - `assets/models/hd/`: the rebuilt models and their textures, made in Blender by scripts in `tools/models/`
   (`pip install bpy`, then e.g. `python3 tools/models/guard_hd.py`): `rig_kit.py` (shared: rigs, skinning,
-  shapes, animation keys), `sculpt_kit.py` (the second pass: shapes fused into one continuous mesh, retopologised,
-  skinned, unwrapped and given its own pixel-art atlas; Kael so far), `guard_hd.py`, `kael_hd.py`,
-  `hollow_wolf_hd.py`, `skeleton_hd.py`. Kael's Blender file (`tools/models/blend/kael.blend`) and baked maps
-  (`tools/models/maps/kael.npz`) are saved by his script.
+  shapes, animation keys), `guard_hd.py`, `kael_hd.py`, `hollow_wolf_hd.py`, `skeleton_hd.py`
+  (all built from crisp pieces with tiled textures). `sculpt_kit.py` is retired (the one-mesh sculpt pass, 2026-11-15;
+  Cody 2026-11-16: it looked bad in the game), kept for reference.
 - `tools/test/`: screenshot drivers (`shoot.sh shot_field`, `shot_portrait`, `shot_rig` (every model in key
   poses; `RIG=guard,kael`), `battle_auto`; Forward+ needs
   Vulkan: `DRIVER=vulkan`, the default).

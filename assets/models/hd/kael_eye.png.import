@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b7gvqeobbaamq"
-path="res://.godot/imported/kael_atlas.png-8b2bd2bdf9e0df092fc18f239739f478.ctex"
+uid="uid://bl1stgt06v5hp"
+path="res://.godot/imported/kael_eye.png-85e6f409efcd78cb37f19ab58b29eff0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/models/hd/kael_atlas.png"
-dest_files=["res://.godot/imported/kael_atlas.png-8b2bd2bdf9e0df092fc18f239739f478.ctex"]
+source_file="res://assets/models/hd/kael_eye.png"
+dest_files=["res://.godot/imported/kael_eye.png-85e6f409efcd78cb37f19ab58b29eff0.ctex"]
 
 [params]
 
